@@ -1,6 +1,9 @@
 using System;
 using UnityEngine;
 
+/// <summary>
+/// Base command class
+/// </summary>
 public class DebugCommandBase
 {
     public string CommandID { private set; get; }
@@ -15,6 +18,9 @@ public class DebugCommandBase
     }
 }
 
+/// <summary>
+/// Simple command class with no parameters
+/// </summary>
 public class DebugCommand : DebugCommandBase
 {
     private Action command;
@@ -30,6 +36,9 @@ public class DebugCommand : DebugCommandBase
     }
 }
 
+/// <summary>
+/// Complex command class with unlimited number of parameters
+/// </summary>
 public class DebugCommandMulti : DebugCommandBase
 {
     private Action<string[]> _command;

@@ -2,12 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>
+/// Controller class for the Console. Responsible for all user interactions with a console
+/// </summary>
 public class DebugController : MonoBehaviour
 {
+/// <summary>
+/// Marks if debug mode is enabled in the scene.
+/// </summary>
     public bool DebugEnabled { get; private set; }
     public GUISkin Skin;
-
-    public static DebugController Instance;
 
     private static readonly float inputHeight = 40f;
     private float _relativeInputHeight = Screen.height / 1080f * inputHeight;
@@ -64,7 +68,11 @@ public class DebugController : MonoBehaviour
             _shouldFocus = false;
         }
     }
-
+/// <summary>
+/// Courutine which sole purpose is to clear the selection of an GUI input field on the end of the frame. It's done this way to simulate 
+/// similar solution for Canvas TextField, where people create custom class and remove selection in the LateUpdate().
+/// </summary>
+/// <returns></returns>
     private System.Collections.IEnumerator ClearHighlightNextFrame()
     {
         yield return new WaitForEndOfFrame();
@@ -76,7 +84,10 @@ public class DebugController : MonoBehaviour
             te.SelectNone();
         }
     }
-
+/// <summary>
+/// Method that handles all keyboard inputs
+/// </summary>
+/// <param name="e"></param>
     private void HandleInputKeys(Event e)
     {
         var CommandHistory = DebugConsole.CommandHistory;
@@ -150,67 +161,9 @@ public class DebugController : MonoBehaviour
             }
         }
     }
-
-    //private void HandleInputText()
-    //{
-    //    _log.Add($"> {input}");
-
-    //    if (CommandHistory.Count == 0 || CommandHistory[CommandHistory.Count - 1] != input)
-    //    {
-    //        CommandHistory.Add(input);
-    //    }
-    //    _historyIndex = -1;
-
-    //    string[] splittedInput = input.Split(" ");
-
-    //    for (int i = 0; i < Commands.Count; i++)
-    //    {
-    //        var commandBase = Commands[i] as DebugCommandBase;
-    //        if (splittedInput[0].ToLower().Contains(commandBase.CommandID))
-    //        {
-    //            if (Commands[i] is DebugCommand)
-    //            {
-    //                (Commands[i] as DebugCommand).Invoke();
-    //            }
-    //            else if (Commands[i] is DebugCommand<int>)
-    //            {
-    //                if (splittedInput.Length > 1)
-    //                {
-    //                    try
-    //                    {
-    //                        Convert.ToInt32(splittedInput[1]);
-    //                    }
-    //                    catch (Exception e)
-    //                    {
-    //                        AddErrorLog($"Parameter {splittedInput[1]} was not of type Int");
-    //                        return;
-    //                    }
-
-    //                    (Commands[i] as DebugCommand<int>).Invoke(Convert.ToInt32(splittedInput[1]));
-    //                }
-    //                else
-    //                {
-    //                    AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
-    //                }
-    //            }
-    //            else if (Commands[i] is DebugCommand<string>)
-    //            {
-    //                if (splittedInput.Length > 1)
-    //                {
-    //                    (Commands[i] as DebugCommand<string>).Invoke(splittedInput[1]);
-    //                }
-    //                else
-    //                {
-    //                    AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
-    //                }
-    //            }
-    //            return;
-    //        }
-    //    }
-
-    //    AddErrorLog($"Command {input} wasn't found in the command directory");
-    //}
-
+/// <summary>
+/// Method that displays the console output contents. 
+/// </summary>
     private void DrawLogs()
     {
         GUI.Box(new Rect(0f, 0f, Screen.width, Screen.height - _relativeInputHeight * 1.2f), "");
@@ -226,7 +179,10 @@ public class DebugController : MonoBehaviour
             logCounter++;
         }
     }
-
+/// <summary>
+/// Method that displays the suggestion box.
+/// </summary>
+/// <param name="inputY"></param>
     private void DrawSuggestionBox(float inputY)
     {
         if (!_showSuggestions) return;
@@ -252,7 +208,10 @@ public class DebugController : MonoBehaviour
             GUI.Label(itemRect, highlightedText, Skin.label);
         }
     }
-
+/// <summary>
+/// Method that draws the console input field.
+/// </summary>
+/// <param name="y"></param>
     private void DrawInput(float y)
     {
         GUI.Box(new Rect(0, y, Screen.width, _relativeInputHeight), "");
@@ -269,7 +228,9 @@ public class DebugController : MonoBehaviour
 
         GUI.backgroundColor = Color.white;
     }
-
+/// <summary>
+/// Method that updates the list of suggested commands based on the current input.
+/// </summary>
     private void UpdateFilteredCommands()
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -292,7 +253,12 @@ public class DebugController : MonoBehaviour
         _showSuggestions = _filteredCommands.Count > 0;
         _selectedSuggestionIndex = Mathf.Clamp(_selectedSuggestionIndex, 0, Mathf.Max(0, _filteredCommands.Count - 1));
     }
-
+/// <summary>
+/// Helper method that returns a string with highlighted matching letters.
+/// </summary>
+/// <param name="fullText"></param>
+/// <param name="input"></param>
+/// <returns></returns>
     private string HighlightMatch(string fullText, string input)
     {
         if (string.IsNullOrEmpty(input)) return fullText;
@@ -303,7 +269,9 @@ public class DebugController : MonoBehaviour
         string match = fullText.Substring(index, input.Length);
         return fullText.Replace(match, $"<color=#FFD700><b>{match}</b></color>");
     }
-
+/// <summary>
+/// Method to show/hide the console.
+/// </summary>
     private void ToggleConsole()
     {
         DebugEnabled = !DebugEnabled;
@@ -311,25 +279,5 @@ public class DebugController : MonoBehaviour
         {
             _shouldFocus = true;
         }
-    }
-
-    public void AddLog(string line)
-    {
-        _log.Add(line);
-        if (Screen.height - _relativeInputHeight * 1.35f - (_log.Count) * Skin.label.fontSize < 0)
-        {
-            _log.RemoveAt(0);
-        }
-    }
-
-    public void AddErrorLog(string line)
-    {
-        AddLog("<color=red>" + line + "</color>");
-    }
-
-    private void ConsoleClear()
-    {
-        _log.Clear();
-        AddLog("Console Cleared");
     }
 }

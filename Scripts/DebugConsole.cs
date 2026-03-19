@@ -6,16 +6,31 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Windows;
 
+/// <summary>
+/// Unity debug console class
+/// </summary>
 public static class DebugConsole
 {
     private static readonly List<string> _log = new List<string>();
+/// <summary>
+/// Log of all of the console output. Readonly.
+/// </summary>
     public static IReadOnlyList<string> Log => _log; 
 
+/// <summary>
+/// List of all Console Commands.
+/// </summary>
     public static List<DebugCommandBase> Commands { get; private set; } = new List<DebugCommandBase>();
-
+/// <summary>
+/// History of all enetered commands. Readonly.
+/// </summary>
     public static readonly List<string> CommandHistory = new List<string>();
     public static int HistoryIndex = -1;
 
+/// <summary>
+/// Class responsible for gathering information about all of custom commands across the whole project.
+/// </summary>
+/// <exception cref="Exception"></exception>
     [UnityEngine.RuntimeInitializeOnLoadMethod(UnityEngine.RuntimeInitializeLoadType.AfterAssembliesLoaded)]
     public static void Initialize()
     {
@@ -55,18 +70,27 @@ public static class DebugConsole
             }));
         }
     }
-
+/// <summary>
+/// Method to output a message in to the console.
+/// </summary>
+/// <param name="message"></param>
     public static void AddLog(string message)
     {
         _log.Add(message);
         if (_log.Count > 100) _log.RemoveAt(0);
     }
-
+/// <summary>
+/// Method to output an error message in to the console.
+/// </summary>
+/// <param name="message"></param>
     public static void AddErrorLog(string message)
     {
         AddLog($"<color=red>{message}</color>");
     }
-
+/// <summary>
+/// Method that process console input.
+/// </summary>
+/// <param name="input">Console input.</param>
     public static void Execute(string input)
     {
         _log.Add($"> {input}");
