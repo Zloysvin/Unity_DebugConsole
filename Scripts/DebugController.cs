@@ -9,57 +9,15 @@ public class DebugController : MonoBehaviour
 
     public static DebugController Instance;
 
-    private static readonly float _inputHeight = 40f;
-    private float _relativeInputHeight = Screen.height / 1080f * _inputHeight;
-    private string _input;
+    private static readonly float inputHeight = 40f;
+    private float _relativeInputHeight = Screen.height / 1080f * inputHeight;
+    private string input;
     private bool _shouldFocus;
-    private readonly List<string> _log = new List<string>();
-
-    public List<object> CommandList;
-
-    private List<string> _commandHistory = new List<string>();
-    private int _historyIndex = -1;
+    private List<string> _log = new List<string>();
 
     private List<DebugCommandBase> _filteredCommands = new List<DebugCommandBase>();
     private int _selectedSuggestionIndex = 0;
     private bool _showSuggestions = false;
-
-    public static DebugCommand ClearConsole;
-    public static DebugCommand HelpCommand;
-    public static DebugCommand<int> DebugCount;
-
-    void Awake()
-    {
-        if(Instance == null)
-            Instance = this;
-
-        // Commands Declaration
-        ClearConsole = new DebugCommand("clearconsole", "Clears all console lines", "ClearConsole", ConsoleClear);
-        HelpCommand = new DebugCommand("help", "Shows information about all avaliable commands", "Help", () =>
-        {
-            foreach (var debugCommand in CommandList)
-            {
-                var commandBase = (DebugCommandBase)debugCommand;
-                AddLog($"{commandBase.CommandFormat} - {commandBase.CommandDescription}");
-            }
-        });
-
-        DebugCount = new DebugCommand<int>("debugcount", "Counts number to N. Params: (int) N", "DebugCount", (x) =>
-        {
-            for (int i = 0; i < x; i++)
-            {
-                AddErrorLog((i + 1).ToString());
-            }
-        });
-
-        // Adds Commands to the list
-        CommandList = new List<object>
-        {
-            ClearConsole,
-            HelpCommand,
-            DebugCount,
-        };
-    }
 
     void Start()
     {
@@ -76,6 +34,8 @@ public class DebugController : MonoBehaviour
     void OnGUI()
     {
         if (!DebugEnabled) return;
+
+        _log = (List<string>)DebugConsole.Log;
 
         Event e = Event.current;
         float y = Screen.height - _relativeInputHeight;
@@ -119,14 +79,17 @@ public class DebugController : MonoBehaviour
 
     private void HandleInputKeys(Event e)
     {
+        var CommandHistory = DebugConsole.CommandHistory;
+        var _historyIndex = DebugConsole.HistoryIndex;
+
         if (e.type != EventType.KeyDown) return;
 
         if (e.keyCode == KeyCode.Return)
         {
-            if (!string.IsNullOrWhiteSpace(_input))
+            if (!string.IsNullOrWhiteSpace(input))
             {
-                HandleInputText();
-                _input = "";
+                DebugConsole.Execute(input);
+                input = "";
                 _filteredCommands.Clear();
                 _showSuggestions = false;
             }
@@ -137,7 +100,6 @@ public class DebugController : MonoBehaviour
         {
             ToggleConsole();
         }
-        // Case A: Suggestions are showing - Navigate the box
         else if (_showSuggestions)
         {
             if (e.keyCode == KeyCode.DownArrow)
@@ -152,38 +114,35 @@ public class DebugController : MonoBehaviour
             }
             else if (e.keyCode == KeyCode.Tab)
             {
-                _input = _filteredCommands[_selectedSuggestionIndex].CommandID;
+                input = _filteredCommands[_selectedSuggestionIndex].CommandID;
                 _shouldFocus = true;
                 e.Use();
             }
         }
-        // Case B: Suggestions are NOT showing - Navigate Command History
-        else if (!_showSuggestions && _commandHistory.Count > 0)
+        else if (!_showSuggestions && CommandHistory.Count > 0)
         {
             if (e.keyCode == KeyCode.UpArrow)
             {
-                // Move backwards in time (towards older commands)
-                if (_historyIndex == -1) _historyIndex = _commandHistory.Count - 1;
+                if (_historyIndex == -1) _historyIndex = CommandHistory.Count - 1;
                 else if (_historyIndex > 0) _historyIndex--;
 
-                _input = _commandHistory[_historyIndex];
+                input = CommandHistory[_historyIndex];
                 _shouldFocus = true;
                 e.Use();
             }
             else if (e.keyCode == KeyCode.DownArrow)
             {
-                // Move forwards in time (towards newer commands)
                 if (_historyIndex != -1)
                 {
-                    if (_historyIndex < _commandHistory.Count - 1)
+                    if (_historyIndex < CommandHistory.Count - 1)
                     {
                         _historyIndex++;
-                        _input = _commandHistory[_historyIndex];
+                        input = CommandHistory[_historyIndex];
                     }
                     else
                     {
                         _historyIndex = -1;
-                        _input = "";
+                        input = "";
                     }
                     _shouldFocus = true;
                     e.Use();
@@ -192,65 +151,65 @@ public class DebugController : MonoBehaviour
         }
     }
 
-    private void HandleInputText()
-    {
-        _log.Add($"> {_input}");
+    //private void HandleInputText()
+    //{
+    //    _log.Add($"> {input}");
 
-        if (_commandHistory.Count == 0 || _commandHistory[_commandHistory.Count - 1] != _input)
-        {
-            _commandHistory.Add(_input);
-        }
-        _historyIndex = -1;
+    //    if (CommandHistory.Count == 0 || CommandHistory[CommandHistory.Count - 1] != input)
+    //    {
+    //        CommandHistory.Add(input);
+    //    }
+    //    _historyIndex = -1;
 
-        string[] splittedInput = _input.Split(" ");
+    //    string[] splittedInput = input.Split(" ");
 
-        for (int i = 0; i < CommandList.Count; i++)
-        {
-            var commandBase = CommandList[i] as DebugCommandBase;
-            if (splittedInput[0].ToLower().Contains(commandBase.CommandID))
-            {
-                if (CommandList[i] is DebugCommand)
-                {
-                    (CommandList[i] as DebugCommand).Invoke();
-                }
-                else if (CommandList[i] is DebugCommand<int>)
-                {
-                    if (splittedInput.Length > 1)
-                    {
-                        try
-                        {
-                            Convert.ToInt32(splittedInput[1]);
-                        }
-                        catch (Exception e)
-                        {
-                            AddErrorLog($"Parameter {splittedInput[1]} was not of type Int");
-                            return;
-                        }
+    //    for (int i = 0; i < Commands.Count; i++)
+    //    {
+    //        var commandBase = Commands[i] as DebugCommandBase;
+    //        if (splittedInput[0].ToLower().Contains(commandBase.CommandID))
+    //        {
+    //            if (Commands[i] is DebugCommand)
+    //            {
+    //                (Commands[i] as DebugCommand).Invoke();
+    //            }
+    //            else if (Commands[i] is DebugCommand<int>)
+    //            {
+    //                if (splittedInput.Length > 1)
+    //                {
+    //                    try
+    //                    {
+    //                        Convert.ToInt32(splittedInput[1]);
+    //                    }
+    //                    catch (Exception e)
+    //                    {
+    //                        AddErrorLog($"Parameter {splittedInput[1]} was not of type Int");
+    //                        return;
+    //                    }
 
-                        (CommandList[i] as DebugCommand<int>).Invoke(Convert.ToInt32(splittedInput[1]));
-                    }
-                    else
-                    {
-                        AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
-                    }
-                }
-                else if (CommandList[i] is DebugCommand<string>)
-                {
-                    if (splittedInput.Length > 1)
-                    {
-                        (CommandList[i] as DebugCommand<string>).Invoke(splittedInput[1]);
-                    }
-                    else
-                    {
-                        AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
-                    }
-                }
-                return;
-            }
-        }
+    //                    (Commands[i] as DebugCommand<int>).Invoke(Convert.ToInt32(splittedInput[1]));
+    //                }
+    //                else
+    //                {
+    //                    AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
+    //                }
+    //            }
+    //            else if (Commands[i] is DebugCommand<string>)
+    //            {
+    //                if (splittedInput.Length > 1)
+    //                {
+    //                    (Commands[i] as DebugCommand<string>).Invoke(splittedInput[1]);
+    //                }
+    //                else
+    //                {
+    //                    AddErrorLog($"Command {commandBase.CommandFormat} takes 1 argument, but was given 0");
+    //                }
+    //            }
+    //            return;
+    //        }
+    //    }
 
-        AddErrorLog($"Command {_input} wasn't found in the command directory");
-    }
+    //    AddErrorLog($"Command {input} wasn't found in the command directory");
+    //}
 
     private void DrawLogs()
     {
@@ -289,7 +248,7 @@ public class DebugController : MonoBehaviour
                 GUI.color = Color.white;
             }
 
-            string highlightedText = HighlightMatch(_filteredCommands[i].CommandID, _input);
+            string highlightedText = HighlightMatch(_filteredCommands[i].CommandID, input);
             GUI.Label(itemRect, highlightedText, Skin.label);
         }
     }
@@ -300,11 +259,11 @@ public class DebugController : MonoBehaviour
         GUI.backgroundColor = new Color(0f, 0f, 0f, 0f);
         GUI.SetNextControlName("ConsoleInput");
 
-        string newStr = GUI.TextField(new Rect(10f, y, Screen.width - 20f, _relativeInputHeight), _input, Skin.textField);
+        string newStr = GUI.TextField(new Rect(10f, y, Screen.width - 20f, _relativeInputHeight), input, Skin.textField);
 
-        if (newStr != _input)
+        if (newStr != input)
         {
-            _input = newStr;
+            input = newStr;
             _selectedSuggestionIndex = 0;
         }
 
@@ -313,18 +272,18 @@ public class DebugController : MonoBehaviour
 
     private void UpdateFilteredCommands()
     {
-        if (string.IsNullOrWhiteSpace(_input))
+        if (string.IsNullOrWhiteSpace(input))
         {
             _showSuggestions = false;
             return;
         }
 
         _filteredCommands.Clear();
-        foreach (var cmd in CommandList)
+        foreach (var cmd in DebugConsole.Commands)
         {
             var cb = (DebugCommandBase)cmd;
-            if (cb.CommandID.ToLower().Contains(_input.ToLower()) && 
-                !cb.CommandID.ToLower().Equals(_input.ToLower()))
+            if (cb.CommandID.ToLower().Contains(input.ToLower()) && 
+                !cb.CommandID.ToLower().Equals(input.ToLower()))
             {
                 _filteredCommands.Add(cb);
             }

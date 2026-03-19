@@ -30,17 +30,15 @@ public class DebugCommand : DebugCommandBase
     }
 }
 
-public class DebugCommand<T1> : DebugCommandBase
+public class DebugCommandMulti : DebugCommandBase
 {
-    private Action<T1> command;
+    private Action<string[]> _command;
 
-    public DebugCommand(string id, string description, string format, Action<T1> command) : base(id, description, format)
+    public DebugCommandMulti(string id, string description, string format, Action<string[]> command)
+        : base(id, description, format)
     {
-        this.command = command;
+        _command = command;
     }
 
-    public void Invoke(T1 value)
-    {
-        command.Invoke(value);
-    }
+    public void Invoke(string[] args) => _command.Invoke(args);
 }
