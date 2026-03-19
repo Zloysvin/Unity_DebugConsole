@@ -4,7 +4,7 @@
 
 ## Usage
 
-To make console accesable you need to add `DebugController.cs` to any object in the scene. To show the console you need to press "tilda". To close you csn either press "tilda" again if you are not focuesd on the input field, or just pres "Escape".
+To make console accesable you need to add `DebugController.cs` to any object in the scene. The onlu variable in the inspector would be GUI skin. Default one with working setting is provided with the repo, but you can use your custom. To show the console you need to press "tilda". To close you csn either press "tilda" again if you are not focuesd on the input field, or just pres "Escape".
 
 Console supports command suggestions when you type symbols. Use your Up/Down arrow keys to navigate suggestions and press Tab to choose. It also supports command history - just use Up/Down arrow keys when there's no suggestions displayed. Console commands can have unlimited number of parameters, and you have to enter them with a space in between of each of them in the cosnole.
 
