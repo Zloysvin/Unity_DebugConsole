@@ -17,6 +17,9 @@ public class DebugController : MonoBehaviour
 
     public List<object> CommandList;
 
+    private List<string> _commandHistory = new List<string>();
+    private int _historyIndex = -1;
+
     private List<DebugCommandBase> _filteredCommands = new List<DebugCommandBase>();
     private int _selectedSuggestionIndex = 0;
     private bool _showSuggestions = false;
@@ -116,40 +119,72 @@ public class DebugController : MonoBehaviour
 
     private void HandleInputKeys(Event e)
     {
-        if (e.type == EventType.KeyDown)
+        if (e.type != EventType.KeyDown) return;
+
+        if (e.keyCode == KeyCode.Return)
         {
-            if (e.keyCode == KeyCode.Return)
+            if (!string.IsNullOrWhiteSpace(_input))
             {
-                if (!string.IsNullOrWhiteSpace(_input))
-                {
-                    HandleInputText();
-                    _input = "";
-                    _filteredCommands.Clear();
-                    _showSuggestions = false;
-                }
+                HandleInputText();
+                _input = "";
+                _filteredCommands.Clear();
+                _showSuggestions = false;
+            }
+            _shouldFocus = true;
+            e.Use();
+        }
+        else if (e.keyCode == KeyCode.Escape)
+        {
+            ToggleConsole();
+        }
+        // Case A: Suggestions are showing - Navigate the box
+        else if (_showSuggestions)
+        {
+            if (e.keyCode == KeyCode.DownArrow)
+            {
+                _selectedSuggestionIndex = (_selectedSuggestionIndex + 1) % _filteredCommands.Count;
+                e.Use();
+            }
+            else if (e.keyCode == KeyCode.UpArrow)
+            {
+                _selectedSuggestionIndex = (_selectedSuggestionIndex - 1 + _filteredCommands.Count) % _filteredCommands.Count;
+                e.Use();
+            }
+            else if (e.keyCode == KeyCode.Tab)
+            {
+                _input = _filteredCommands[_selectedSuggestionIndex].CommandID;
                 _shouldFocus = true;
                 e.Use();
             }
-            else if (e.keyCode == KeyCode.Escape)
+        }
+        // Case B: Suggestions are NOT showing - Navigate Command History
+        else if (!_showSuggestions && _commandHistory.Count > 0)
+        {
+            if (e.keyCode == KeyCode.UpArrow)
             {
-                ToggleConsole();
-                return;
+                // Move backwards in time (towards older commands)
+                if (_historyIndex == -1) _historyIndex = _commandHistory.Count - 1;
+                else if (_historyIndex > 0) _historyIndex--;
+
+                _input = _commandHistory[_historyIndex];
+                _shouldFocus = true;
+                e.Use();
             }
-            else if (_showSuggestions)
+            else if (e.keyCode == KeyCode.DownArrow)
             {
-                if (e.keyCode == KeyCode.DownArrow)
+                // Move forwards in time (towards newer commands)
+                if (_historyIndex != -1)
                 {
-                    _selectedSuggestionIndex = (_selectedSuggestionIndex + 1) % _filteredCommands.Count;
-                    e.Use();
-                }
-                else if (e.keyCode == KeyCode.UpArrow)
-                {
-                    _selectedSuggestionIndex = (_selectedSuggestionIndex - 1 + _filteredCommands.Count) % _filteredCommands.Count;
-                    e.Use();
-                }
-                else if (e.keyCode == KeyCode.Tab)
-                {
-                    _input = _filteredCommands[_selectedSuggestionIndex].CommandID;
+                    if (_historyIndex < _commandHistory.Count - 1)
+                    {
+                        _historyIndex++;
+                        _input = _commandHistory[_historyIndex];
+                    }
+                    else
+                    {
+                        _historyIndex = -1;
+                        _input = "";
+                    }
                     _shouldFocus = true;
                     e.Use();
                 }
@@ -160,6 +195,12 @@ public class DebugController : MonoBehaviour
     private void HandleInputText()
     {
         _log.Add($"> {_input}");
+
+        if (_commandHistory.Count == 0 || _commandHistory[_commandHistory.Count - 1] != _input)
+        {
+            _commandHistory.Add(_input);
+        }
+        _historyIndex = -1;
 
         string[] splittedInput = _input.Split(" ");
 
@@ -282,7 +323,8 @@ public class DebugController : MonoBehaviour
         foreach (var cmd in CommandList)
         {
             var cb = (DebugCommandBase)cmd;
-            if (cb.CommandID.ToLower().Contains(_input.ToLower()))
+            if (cb.CommandID.ToLower().Contains(_input.ToLower()) && 
+                !cb.CommandID.ToLower().Equals(_input.ToLower()))
             {
                 _filteredCommands.Add(cb);
             }
